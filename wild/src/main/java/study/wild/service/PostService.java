@@ -3,13 +3,13 @@ package study.wild.service;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.Filter;
-import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import study.wild.domain.Post;
+import study.wild.dto.CategoryDto;
 import study.wild.dto.PostDto;
+import study.wild.repository.CategoryRepository;
 import study.wild.repository.PostRepository;
 
 import java.util.List;
@@ -21,7 +21,8 @@ import java.util.stream.Collectors;
 public class PostService {
 
     private final PostRepository postRepository;
-
+    private final CategoryService categoryService;
+    private final CategoryRepository categoryRepository;
     @Autowired
     private EntityManager em;
 
@@ -29,9 +30,11 @@ public class PostService {
      * 게시글 등록
      */
     @Transactional
-    public PostDto savePost(PostDto postDto) {
-        Post post = postRepository.save(postDto.toEntity());
-        return PostDto.from(post);
+    public PostDto createPost(PostDto postDto) {
+        CategoryDto categoryDto = categoryService.findByPost(postDto);
+
+        Post savedPost = postRepository.save(postDto.toEntity(categoryDto.toEntity()));
+        return PostDto.from(savedPost);
     }
 
     /**
@@ -50,6 +53,7 @@ public class PostService {
 
     /**
      * 전체 게시글 조회 (삭제 여부 조건에 필터링한 게시글)
+     *
      * @param isDeleted 게시글 삭제 여부
      */
     public List<PostDto> findPosts(boolean isDeleted) {
@@ -63,6 +67,7 @@ public class PostService {
 
     /**
      * 특정 게시글 조회 (삭제 여부 조건에 필터링한 게시글)
+     *
      * @param isDeleted 게시글 삭제 여부
      */
     public PostDto findPost(Long postId, boolean isDeleted) {
