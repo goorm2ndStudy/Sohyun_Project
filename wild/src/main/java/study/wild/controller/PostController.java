@@ -26,13 +26,13 @@ public class PostController {
     @PostMapping("/posts")
     @ResponseStatus(HttpStatus.CREATED)
     public PostDto save(@RequestBody PostDto postDto) {
-        return postService.savePost(postDto);
+        return postService.createPost(postDto);
     }
 
     @PutMapping("/posts/{postId}")
     @ResponseStatus(HttpStatus.CREATED)
     public PostDto updatePost(@PathVariable Long postId, @RequestBody PostDto postDto) {
-        return postService.updatePost(postId, postDto);
+        return postService.editPost(postId, postDto);
     }
 
     @GetMapping("/posts")
@@ -47,7 +47,7 @@ public class PostController {
 
     @GetMapping("/{postId}")
     public PostDto getPost(@PathVariable Long postId) {
-        return postService.findPost(postId, false);
+        return postService.viewPostDetail(postId, false);
     }
 
     @DeleteMapping("/{postId}")

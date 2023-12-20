@@ -38,7 +38,7 @@ public class PostServiceTest {
         PostDto postDto = createPostDto("제목A", "내용A");
 
         // when
-        PostDto savedPostDto = postService.savePost(postDto);
+        PostDto savedPostDto = postService.createPost(postDto);
 
         // then
         assertThat(savedPostDto).isNotNull();
@@ -54,7 +54,7 @@ public class PostServiceTest {
         createAndSavePostDto("제목C", "내용C");
 
         // when
-        List<PostDto> postDtos = postService.findPosts(false);
+        List<PostDto> postDtos = postService.viewPosts(false);
 
         // then
         assertThat(postDtos).hasSize(3)
@@ -68,7 +68,7 @@ public class PostServiceTest {
         PostDto postDto = createPostDto("제목A", "내용A");
 
         // when
-        PostDto findedPostDto = postService.findPost(postService.savePost(postDto).id(), false);
+        PostDto findedPostDto = postService.viewPostDetail(postService.createPost(postDto).id(), false);
 
         // then
         assertThat(findedPostDto.title()).isEqualTo("제목A");
@@ -79,16 +79,30 @@ public class PostServiceTest {
     public void 게시글_수정_테스트() {
         // given
         PostDto originalPost = createPostDto("원래 제목", "원래 내용");
-        PostDto savedPost = postService.savePost(originalPost);
+        PostDto savedPost = postService.createPost(originalPost);
 
         PostDto updatedPostDto = createPostDto("수정된 제목", "수정된 내용");
 
         // when
-        PostDto updatedPost = postService.updatePost(savedPost.id(), updatedPostDto);
+        PostDto updatedPost = postService.editPost(savedPost.id(), updatedPostDto);
 
         // then
         assertThat(updatedPost.title()).isEqualTo("수정된 제목");
         assertThat(updatedPost.content()).isEqualTo("수정된 내용");
+    }
+
+    @Test
+    public void 삭제된_게시글_수정시_예외발생() {
+        // given
+        PostDto originalPost = createPostDto("원래 제목", "원래 내용");
+        PostDto savedPost = postService.createPost(originalPost);
+        postService.deletePost(savedPost.id());
+
+        // when & then
+        PostDto updatedPostDto = createPostDto("수정된 제목", "수정된 내용");
+        assertThatThrownBy(() -> postService.editPost(savedPost.id(), updatedPostDto))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("Post not found");
     }
 
     @Test
@@ -101,10 +115,10 @@ public class PostServiceTest {
         postService.deletePost(savedPost.id());
 
         // then
-        assertThat(postService.findPosts(false)).hasSize(0);
-        assertThat(postService.findPosts(true)).hasSize(1);
-        assertDoesNotThrow(() -> postService.findPost(savedPost.id(), true));
-        assertThatThrownBy(() -> postService.findPost(savedPost.id(), false))
+        assertThat(postService.viewPosts(false)).hasSize(0);
+        assertThat(postService.viewPosts(true)).hasSize(1);
+        assertDoesNotThrow(() -> postService.viewPostDetail(savedPost.id(), true));
+        assertThatThrownBy(() -> postService.viewPostDetail(savedPost.id(), false))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("Post not found");
     }
@@ -145,7 +159,7 @@ public class PostServiceTest {
 
     private Long createAndSavePostDto(String title, String content) {
         PostDto postDto = createPostDto(title, content);
-        postService.savePost(postDto);
+        return postService.createPost(postDto).id();
     }
 
     private PostDto createPostDto(String title, String content) {

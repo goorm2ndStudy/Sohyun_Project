@@ -45,7 +45,7 @@ public class Post extends BaseTimeEntity {
     private String content;
 
     @Column(columnDefinition = "integer default 0")
-    private Long view;
+    private Long view = 0L;
 
     @Column(columnDefinition = "boolean default false")
     private boolean deleted;
@@ -59,5 +59,9 @@ public class Post extends BaseTimeEntity {
         this.category = category;
         this.title = title;
         this.content = content;
+    }
+
+    public void increaseView() {
+        this.view++;
     }
 }
