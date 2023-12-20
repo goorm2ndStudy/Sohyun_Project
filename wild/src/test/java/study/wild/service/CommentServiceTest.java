@@ -1,21 +1,17 @@
 package study.wild.service;
 
 import jakarta.persistence.EntityNotFoundException;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
-import study.wild.domain.Comment;
 import study.wild.dto.CommentDto;
 import study.wild.dto.PostDto;
-import study.wild.repository.CommentRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -96,9 +92,25 @@ class CommentServiceTest {
                 .hasSize(0);
     }
 
+    @Test
+    void 게시글_삭제시_연관댓글_삭제() {
+        // given
+        Long postId = createPostDtoAndGetId("제목", "내용");
+        for (int i = 0; i < 4; i++) {
+            saveAndGetCommentId(postId, "댓글" + i);
+        }
+
+        // when
+        postService.deletePost(postId);
+
+        // then
+        assertThat(commentService.getCommentAll())
+                .hasSize(0);
+    }
+
     private Long createPostDtoAndGetId(String title, String content) {
         PostDto postDto = new PostDto(null, title, content);
-        return postService.savePost(postDto).id();
+        return postService.createPost(postDto).id();
     }
 
     private CommentDto createCommentDto(String content) {
