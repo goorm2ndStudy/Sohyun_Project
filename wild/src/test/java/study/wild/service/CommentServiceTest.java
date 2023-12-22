@@ -2,10 +2,8 @@ package study.wild.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 import study.wild.dto.CommentDto;
 import study.wild.dto.PostDto;
@@ -13,7 +11,6 @@ import study.wild.dto.PostDto;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest
 @Transactional
 class CommentServiceTest {
@@ -22,7 +19,10 @@ class CommentServiceTest {
     private CommentService commentService;
 
     @Autowired
-    private PostService postService;
+    private PostCategoryService postCategoryService;
+
+    @Autowired
+    private PostCommentService postCommentService;
 
     @Test
     public void 댓글_등록_테스트() {
@@ -31,7 +31,7 @@ class CommentServiceTest {
         CommentDto commentDto = createCommentDto("댓글 내용");
 
         // when
-        CommentDto saveComment = commentService.saveComment(postId, commentDto);
+        CommentDto saveComment = postCommentService.createCommentWithPost(postId, commentDto);
 
         // then
         assertThat(saveComment.content()).isEqualTo(commentDto.content());
@@ -43,7 +43,7 @@ class CommentServiceTest {
         CommentDto commentDto = createCommentDto("댓글 내용");
 
         // when & then
-        assertThatThrownBy(() -> commentService.saveComment(5L, commentDto))
+        assertThatThrownBy(() -> postCommentService.createCommentWithPost(5L, commentDto))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("Post not found");
     }
@@ -58,7 +58,7 @@ class CommentServiceTest {
         CommentDto commentDto = createCommentDto("댓글 내용 수정");
 
         // when
-        CommentDto updateCommentDto = commentService.updateComment(commentId, commentDto);
+        CommentDto updateCommentDto = commentService.editComment(commentId, commentDto);
 
         // then
         assertThat(updateCommentDto.content()).isEqualTo(commentDto.content());
@@ -68,8 +68,8 @@ class CommentServiceTest {
     public void 특정_게시글의_댓글_조회_테스트() {
         // given
         Long postId = createPostDtoAndGetId("제목", "내용");
-        commentService.saveComment(postId, createCommentDto("댓글1"));
-        commentService.saveComment(postId, createCommentDto("댓글2"));
+        postCommentService.createCommentWithPost(postId, createCommentDto("댓글1"));
+        postCommentService.createCommentWithPost(postId, createCommentDto("댓글2"));
 
         // when & then
         assertThat(commentService.getCommentsByPost(postId))
@@ -92,25 +92,9 @@ class CommentServiceTest {
                 .hasSize(0);
     }
 
-    @Test
-    void 게시글_삭제시_연관댓글_삭제() {
-        // given
-        Long postId = createPostDtoAndGetId("제목", "내용");
-        for (int i = 0; i < 4; i++) {
-            saveAndGetCommentId(postId, "댓글" + i);
-        }
-
-        // when
-        postService.deletePost(postId);
-
-        // then
-        assertThat(commentService.getCommentAll())
-                .hasSize(0);
-    }
-
     private Long createPostDtoAndGetId(String title, String content) {
         PostDto postDto = new PostDto(null, null, title, content);
-        return postService.createPost(postDto).id();
+        return postCategoryService.createPostWithCategory(postDto).id();
     }
 
     private CommentDto createCommentDto(String content) {
@@ -118,7 +102,7 @@ class CommentServiceTest {
     }
 
     private Long saveAndGetCommentId(Long postId, String content) {
-        CommentDto commentDto = commentService.saveComment(
+        CommentDto commentDto = postCommentService.createCommentWithPost(
                 postId,
                 createCommentDto(content));
         return commentDto.id();

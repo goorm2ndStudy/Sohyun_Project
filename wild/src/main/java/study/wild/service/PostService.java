@@ -1,11 +1,11 @@
 package study.wild.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import study.wild.domain.Post;
+import study.wild.common.exception.PostNotFoundException;
+import study.wild.domain.entity.Post;
 import study.wild.dto.CategoryDto;
 import study.wild.dto.PostDto;
 import study.wild.repository.PostRepository;
@@ -13,15 +13,10 @@ import study.wild.repository.PostRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 
-// TODO: PostCommentService 분리할 것
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class PostService {
-
-    private final CommentService commentService;
-
-    private final CategoryService categoryService;
 
     private final PostRepository postRepository;
 
@@ -29,9 +24,7 @@ public class PostService {
      * 게시글 등록
      */
     @Transactional
-    public PostDto createPost(PostDto postDto) {
-        CategoryDto categoryDto = categoryService.findByPost(postDto);
-
+    public PostDto createPost(PostDto postDto, CategoryDto categoryDto) {
         Post savedPost = postRepository.save(postDto.toEntity(categoryDto.toEntity()));
         return PostDto.from(savedPost);
     }
@@ -41,13 +34,11 @@ public class PostService {
      */
     @Transactional
     public PostDto editPost(Long postId, PostDto postDto) {
-        return postRepository.findPostByIdAndIsDeleted(postId, false)
-                .map(post -> {
-                    post.setTitle(postDto.title());
-                    post.setContent(postDto.content());
-                    return PostDto.from(postRepository.save(post));
-                })
-                .orElseThrow(() -> new EntityNotFoundException("Post not found"));
+        Post findPost = postRepository.findPostByIdAndIsDeleted(postId, false)
+                .orElseThrow(PostNotFoundException::new);
+        findPost.setTitle(postDto.title());
+        findPost.setContent(postDto.content());
+        return PostDto.from(findPost);
     }
 
     /**
@@ -63,22 +54,29 @@ public class PostService {
     }
 
     /**
+     * 특정 게시글을 조회하고, 조회수 증가
+     */
+    @Transactional
+    public PostDto viewPostDetail(Long postId) {
+        Post post = getPost(postId, false);
+        increasePostView(post);
+        return PostDto.from(post);
+    }
+
+    /**
      * 특정 게시글 조회 (삭제 여부 조건에 필터링한 게시글)
      *
      * @param isDeleted 게시글 삭제 여부
      */
-    @Transactional
-    public PostDto viewPostDetail(Long postId, boolean isDeleted) {
-        Post post = postRepository.findPostByIdAndIsDeleted(postId, isDeleted)
-                .orElseThrow(() -> new EntityNotFoundException("Post not found"));
-        countUpView(post);
-        return PostDto.from(post);
+    public Post getPost(Long postId, boolean isDeleted) {
+        return postRepository.findPostByIdAndIsDeleted(postId, isDeleted)
+                .orElseThrow(PostNotFoundException::new);
     }
 
     /**
      * 특정 카테고리 내 게시물 조회
      */
-    public List<PostDto> viewPostsByCategory(Long categoryId, boolean isDeleted) {
+    public List<PostDto> getPostsByCategory(Long categoryId, boolean isDeleted) {
         return postRepository.findPostByCategoryIdAndDeleted(categoryId, isDeleted)
                 .stream()
                 .map(PostDto::from)
@@ -86,18 +84,21 @@ public class PostService {
     }
 
     /**
-     * 게시글 삭제 (soft delete)
+     * 조회수 증가
      */
-    @Transactional
-    public void deletePost(Long postId) {
-        postRepository.deleteById(postId);
-        commentService.deleteCommentByPostId(postId);
+    public void increasePostView(Post post) {
+        post.increaseView();
     }
 
     /**
-     * 조회수 증가
+     * 게시글 삭제 (soft delete)
      */
-    public void countUpView(Post post) {
-        post.increaseView();
+    @Transactional
+    public void deletePostById(Long postId) {
+        postRepository.deleteById(postId);
+    }
+
+    public boolean hasPostInCategory(Long categoryId) {
+        return !postRepository.findPostByCategoryIdAndDeleted(categoryId, false).isEmpty();
     }
 }

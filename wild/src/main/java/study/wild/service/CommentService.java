@@ -1,13 +1,12 @@
 package study.wild.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import study.wild.domain.Comment;
+import study.wild.common.exception.CommentNotFoundException;
+import study.wild.domain.entity.Comment;
 import study.wild.dto.CommentDto;
 import study.wild.repository.CommentRepository;
-import study.wild.repository.PostRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,17 +17,12 @@ import java.util.stream.Collectors;
 public class CommentService {
 
     private final CommentRepository commentRepository;
-    private final PostRepository postRepository;
 
     /**
      * 댓글 등록
      */
     @Transactional
-    public CommentDto saveComment(Long postId, CommentDto contentDto) {
-        Comment comment = new Comment();
-        comment.setPost(postRepository.findById(postId)
-                .orElseThrow(() -> new EntityNotFoundException("Post not found")));
-        comment.setContent(contentDto.content());
+    public CommentDto saveComment(Comment comment) {
         return CommentDto.from(commentRepository.save(comment));
     }
 
@@ -36,11 +30,11 @@ public class CommentService {
      * 댓글 수정
      */
     @Transactional
-    public CommentDto updateComment(Long commentId, CommentDto commentDto) {
+    public CommentDto editComment(Long commentId, CommentDto commentDto) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("Post not found"));
+                .orElseThrow(CommentNotFoundException::new);
         comment.setContent(commentDto.content());
-        return CommentDto.from(commentRepository.save(comment));
+        return CommentDto.from(comment);
     }
 
     /**

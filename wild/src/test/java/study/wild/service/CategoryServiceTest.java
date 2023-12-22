@@ -1,30 +1,27 @@
 package study.wild.service;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
+import study.wild.common.exception.NonEmptyCategoryException;
 import study.wild.dto.CategoryDto;
 import study.wild.dto.PostDto;
-import study.wild.exception.NonEmptyCategoryException;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest
 @Transactional
 class CategoryServiceTest {
 
     @Autowired
-    private CategoryService categoryService;
+    private PostCategoryService postCategoryService;
 
     @Autowired
-    private PostService postService;
+    private CategoryService categoryService;
 
     @Test
     public void 카테고리_등록_테스트() {
@@ -62,7 +59,7 @@ class CategoryServiceTest {
         createAndSaveCategoryDto("여행");
 
         // when
-        List<CategoryDto> categories = categoryService.findAllCategories();
+        List<CategoryDto> categories = categoryService.getCategoryAll();
 
         // then
         assertThat(categories).hasSize(4) // default 포함
@@ -79,7 +76,7 @@ class CategoryServiceTest {
         categoryService.deleteCategory(savedCategory.id());
 
         // then
-        assertThat(categoryService.findAllCategories()).hasSize(1); // default 카테고리
+        assertThat(categoryService.getCategoryAll()).hasSize(1); // default 카테고리
     }
 
     @Test
@@ -87,10 +84,10 @@ class CategoryServiceTest {
         // given
         CategoryDto savedCategory = categoryService.createCategory(createCategoryDto("공부"));
         PostDto postDto = createPostDto("제목", savedCategory.id(), "내용");
-        postService.createPost(postDto);
+        postCategoryService.createPostWithCategory(postDto);
 
         // when & then
-        assertThatThrownBy(() -> categoryService.deleteCategory(savedCategory.id()))
+        assertThatThrownBy(() -> postCategoryService.deleteCategoryWithValidation(savedCategory.id()))
                 .isInstanceOf(NonEmptyCategoryException.class);
     }
 
